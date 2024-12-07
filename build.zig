@@ -1,25 +1,39 @@
 const std = @import("std");
 
+fn dayExecuteable(
+    b: *std.Build,
+    day_number: comptime_int,
+    opts: struct { t: std.Build.ResolvedTarget, o: std.builtin.OptimizeMode },
+) *std.Build.Step.Compile {
+    const day_str = std.fmt.comptimePrint("day{d}", .{day_number});
+    return b.addExecutable(.{
+        .name = day_str,
+        .root_source_file = b.path("src/" ++ day_str ++ ".zig"),
+        .target = opts.t,
+        .optimize = opts.o,
+    });
+}
+
+fn runDay(b: *std.Build, exe: *std.Build.Step.Compile, name: []const u8, desc: []const u8) *std.Build.Step {
+    const run = b.addRunArtifact(exe);
+    run.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run.addArgs(args);
+    }
+    const run_step = b.step(name, desc);
+    run_step.dependOn(&run.step);
+    return run_step;
+}
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const day1 = b.addExecutable(.{
-        .name = "day1",
-        .root_source_file = b.path("src/day1.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
+    const day1 = dayExecuteable(b, 1, .{ .t = target, .o = optimize });
     b.installArtifact(day1);
+    _ = runDay(b, day1, "day1", "Run day1");
 
-    const run_day1 = b.addRunArtifact(day1);
-    run_day1.step.dependOn(b.getInstallStep());
-
-    if (b.args) |args| {
-        run_day1.addArgs(args);
-    }
-
-    const run_step_day1 = b.step("day1", "Run day1");
-    run_step_day1.dependOn(&run_day1.step);
+    const day2 = dayExecuteable(b, 2, .{ .t = target, .o = optimize });
+    b.installArtifact(day2);
+    _ = runDay(b, day2, "day2", "Run day2");
 }
