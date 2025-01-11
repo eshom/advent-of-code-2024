@@ -40,4 +40,8 @@ pub fn build(b: *std.Build) void {
     const day3 = dayExecuteable(b, 3, .{ .t = target, .o = optimize });
     b.installArtifact(day3);
     _ = runDay(b, day3, "day3", "Run day3");
+
+    const day4 = dayExecuteable(b, 4, .{ .t = target, .o = optimize });
+    b.installArtifact(day3);
+    _ = runDay(b, day4, "day4", "Run day4");
 }
