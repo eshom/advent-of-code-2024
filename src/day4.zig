@@ -17,6 +17,31 @@ const example =
     \\
 ;
 
+const Direction = enum(usize) {
+    left = 0,
+    topleft,
+    top,
+    topright,
+    right,
+    bottomright,
+    bottom,
+    bottomleft,
+};
+
+const Circle = struct {
+    d: [8]Direction = .{
+        .left,
+        .topleft,
+        .top,
+        .topright,
+        .right,
+        .bottomright,
+        .bottom,
+        .bottomleft,
+    },
+    v: [8]u8 = .{'.'} ** 8,
+};
+
 const Pos = struct {
     row: usize,
     col: usize,
@@ -60,6 +85,26 @@ const WordSearch = struct {
         }
 
         return .{ .contents = buf[0 .. rows * cols], .rows = rows, .cols = cols };
+    }
+
+    // TODO: complete this
+    pub fn search(self: *const WordSearch, where: Pos, depth: u8) bool {
+        switch (depth) {
+            0 => {
+                if (self.contents[where.arr(self.cols)] == 'X') {
+                    self.search(Pos);
+                }
+            },
+            else => return false,
+        }
+    }
+
+    // TODO: complete this
+    fn circle(self: *const WordSearch, center: Pos) Circle {
+        const out = Circle{};
+        out.v[Direction.left] = if (center.col) self.contents[Pos.init(center.row, center.col - 1).arr(self.cols)];
+        out.v[Direction.topleft] = if (center.col) self.contents[Pos.init(center.row - 1, center.col - 1).arr(self.cols)];
+        return out;
     }
 
     fn top(self: *const WordSearch, pos: Pos) u8 {
