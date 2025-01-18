@@ -44,4 +44,18 @@ pub fn build(b: *std.Build) void {
     const day4 = dayExecuteable(b, 4, .{ .t = target, .o = optimize });
     b.installArtifact(day3);
     _ = runDay(b, day4, "day4", "Run day4");
+
+    const check_exe = b.addExecutable(.{
+        .name = "check",
+        .root_source_file = b.path("src/day1.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+
+    const check = b.step("check", "Check build errors for LSP");
+    check.dependOn(&check_exe.step);
+    check.dependOn(&day2.step);
+    check.dependOn(&day3.step);
+    check.dependOn(&day4.step);
 }

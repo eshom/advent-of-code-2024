@@ -3,6 +3,8 @@ const mem = std.mem;
 const heap = std.heap;
 const debug = std.debug;
 
+const wordsearch = @embedFile("input/day4.txt");
+
 const example =
     \\MMMSXXMASM
     \\MSAMXMSMSA
@@ -26,6 +28,7 @@ const Direction = enum(usize) {
     bottomright,
     bottom,
     bottomleft,
+    center,
 };
 
 const Circle = struct {
@@ -87,98 +90,151 @@ const WordSearch = struct {
         return .{ .contents = buf[0 .. rows * cols], .rows = rows, .cols = cols };
     }
 
-    // TODO: complete this
-    pub fn search(self: *const WordSearch, where: Pos, depth: u8) bool {
-        switch (depth) {
-            0 => {
-                if (self.contents[where.arr(self.cols)] == 'X') {
-                    self.search(Pos);
-                }
-            },
-            else => return false,
-        }
+    pub fn search(self: *const WordSearch, where: Pos) u64 {
+        return searchInternal(self, where, 0, .center);
     }
 
-    // TODO: complete this
+    pub fn searchAll(self: *const WordSearch) u64 {
+        var out: u64 = 0;
+        for (0..self.rows) |r| {
+            for (0..self.cols) |c| {
+                out += search(self, Pos.init(r, c));
+            }
+        }
+        return out;
+    }
+
+    fn searchInternal(self: *const WordSearch, where: Pos, depth: u8, dir: Direction) u64 {
+        var xmas_count: u64 = 0;
+        switch (depth) {
+            0 => {
+                if (self.getRel(where, .center) == 'X') {
+                    const circ = self.circle(where);
+                    for (circ.v, circ.d) |v, d| {
+                        if (v == 'M') {
+                            xmas_count += self.searchInternal(relPos(where, d), depth + 1, d);
+                        }
+                    }
+                }
+            },
+            1 => {
+                if (self.getRel(where, dir) == 'A') {
+                    xmas_count += self.searchInternal(relPos(where, dir), depth + 1, dir);
+                }
+            },
+            2 => {
+                if (self.getRel(where, dir) == 'S') {
+                    return 1;
+                }
+            },
+            else => return 0,
+        }
+
+        return xmas_count;
+    }
+
     fn circle(self: *const WordSearch, center: Pos) Circle {
-        const out = Circle{};
-        out.v[Direction.left] = if (center.col) self.contents[Pos.init(center.row, center.col - 1).arr(self.cols)];
-        out.v[Direction.topleft] = if (center.col) self.contents[Pos.init(center.row - 1, center.col - 1).arr(self.cols)];
+        var out = Circle{};
+        out.v[@intFromEnum(Direction.left)] = self.getRel(center, .left);
+        out.v[@intFromEnum(Direction.topleft)] = self.getRel(center, .topleft);
+        out.v[@intFromEnum(Direction.top)] = self.getRel(center, .top);
+        out.v[@intFromEnum(Direction.topright)] = self.getRel(center, .topright);
+        out.v[@intFromEnum(Direction.right)] = self.getRel(center, .right);
+        out.v[@intFromEnum(Direction.bottomright)] = self.getRel(center, .bottomright);
+        out.v[@intFromEnum(Direction.bottom)] = self.getRel(center, .bottom);
+        out.v[@intFromEnum(Direction.bottomleft)] = self.getRel(center, .bottomleft);
         return out;
     }
 
     fn top(self: *const WordSearch, pos: Pos) u8 {
         if (pos.row == 0) return '.';
-        if (pos.row > self.rows) return '.';
-        if (pos.col >= self.cols) return '.';
-        return self.contents[Pos.init(pos.row - 1, pos.col).arr(self.cols)];
+        if (pos.row > self.rows - 1) return '.';
+        if (pos.col > self.cols - 1) return '.';
+        return self.contents[relPos(pos, .top).arr(self.cols)];
     }
 
     fn bottom(self: *const WordSearch, pos: Pos) u8 {
-        if (pos.row >= self.rows) return '.';
-        if (pos.col >= self.cols) return '.';
-        return self.contents[Pos.init(pos.row + 1, pos.col).arr(self.cols)];
+        if (pos.row >= self.rows - 1) return '.';
+        if (pos.col > self.cols - 1) return '.';
+        return self.contents[relPos(pos, .bottom).arr(self.cols)];
     }
 
     fn left(self: *const WordSearch, pos: Pos) u8 {
         if (pos.col == 0) return '.';
-        if (pos.col > self.cols) return '.';
-        if (pos.row >= self.rows) return '.';
-        return self.contents[Pos.init(pos.row, pos.col - 1).arr(self.cols)];
+        if (pos.col > self.cols - 1) return '.';
+        if (pos.row > self.rows - 1) return '.';
+        return self.contents[relPos(pos, .left).arr(self.cols)];
     }
 
     fn bottomleft(self: *const WordSearch, pos: Pos) u8 {
         if (pos.col == 0) return '.';
-        if (pos.row >= self.rows) return '.';
-        if (pos.col > self.cols) return '.';
-        return self.contents[Pos.init(pos.row + 1, pos.col - 1).arr(self.cols)];
+        if (pos.row >= self.rows - 1) return '.';
+        if (pos.col > self.cols - 1) return '.';
+        return self.contents[relPos(pos, .bottomleft).arr(self.cols)];
     }
 
     fn topleft(self: *const WordSearch, pos: Pos) u8 {
-        if (pos.row == 0 and pos.col == 0) return '.';
-        if (pos.row > self.rows and pos.col > self.cols) return '.';
-        return self.contents[Pos.init(pos.row - 1, pos.col - 1).arr(self.cols)];
+        if (pos.row == 0 or pos.col == 0) return '.';
+        if (pos.row > self.rows - 1) return '.';
+        if (pos.col > self.cols - 1) return '.';
+        return self.contents[relPos(pos, .topleft).arr(self.cols)];
     }
 
     fn right(self: *const WordSearch, pos: Pos) u8 {
-        if (pos.row >= self.rows) return '.';
-        if (pos.col >= self.cols) return '.';
-        return self.contents[Pos.init(pos.row, pos.col + 1).arr(self.cols)];
+        if (pos.row > self.rows - 1) return '.';
+        if (pos.col >= self.cols - 1) return '.';
+        return self.contents[relPos(pos, .right).arr(self.cols)];
     }
 
     fn bottomright(self: *const WordSearch, pos: Pos) u8 {
-        if (pos.row >= self.rows) return '.';
-        if (pos.col >= self.cols) return '.';
-        return self.contents[Pos.init(pos.row + 1, pos.col + 1).arr(self.cols)];
+        if (pos.row >= self.rows - 1) return '.';
+        if (pos.col >= self.cols - 1) return '.';
+        return self.contents[relPos(pos, .bottomright).arr(self.cols)];
     }
 
     fn topright(self: *const WordSearch, pos: Pos) u8 {
         if (pos.row == 0) return '.';
-        if (pos.row > self.rows) return '.';
-        if (pos.col >= self.cols) return '.';
-        return self.contents[Pos.init(pos.row - 1, pos.col + 1).arr(self.cols)];
+        if (pos.row > self.rows - 1) return '.';
+        if (pos.col >= self.cols - 1) return '.';
+        return self.contents[relPos(pos, .topright).arr(self.cols)];
+    }
+
+    fn getRel(self: *const WordSearch, pos: Pos, direction: Direction) u8 {
+        return switch (direction) {
+            .left => self.left(pos),
+            .topleft => self.topleft(pos),
+            .top => self.top(pos),
+            .topright => self.topright(pos),
+            .right => self.right(pos),
+            .bottomright => self.bottomright(pos),
+            .bottom => self.bottom(pos),
+            .bottomleft => self.bottomleft(pos),
+            .center => self.contents[pos.arr(self.cols)],
+        };
     }
 };
+
+fn relPos(pos: Pos, direction: Direction) Pos {
+    return switch (direction) {
+        .left => Pos.init(pos.row, pos.col - 1),
+        .topleft => Pos.init(pos.row - 1, pos.col - 1),
+        .top => Pos.init(pos.row - 1, pos.col),
+        .topright => Pos.init(pos.row - 1, pos.col + 1),
+        .right => Pos.init(pos.row, pos.col + 1),
+        .bottomright => Pos.init(pos.row + 1, pos.col + 1),
+        .bottom => Pos.init(pos.row + 1, pos.col),
+        .bottomleft => Pos.init(pos.row + 1, pos.col - 1),
+        .center => pos,
+    };
+}
 
 pub fn main() !void {
     var arena = heap.ArenaAllocator.init(heap.page_allocator);
     defer arena.deinit();
     const ally = arena.allocator();
 
-    const ws = try WordSearch.init(ally, example);
-    debug.print("{}\n", .{ws});
-    debug.print("top[0][0] = '{c}' (expecting = '.')\n", .{ws.top(Pos.init(0, 0))});
-    debug.print("top[1][3] = '{c}' (expecting = 'S')\n", .{ws.top(Pos.init(1, 3))});
-    debug.print("top[9][1] = '{c}' (expecting = 'A')\n", .{ws.top(Pos.init(9, 1))});
-    debug.print("top[10][1] = '{c}' (expecting = 'X')\n", .{ws.top(Pos.init(10, 1))});
-    debug.print("top[11][1] = '{c}' (expecting = '.')\n", .{ws.top(Pos.init(11, 1))});
-    debug.print("bottom[0][0] = '{c}' (expecting = '.')\n", .{ws.bottom(Pos.init(0, 0))});
-    debug.print("bottom[2][9] = '{c}' (expecting = 'X')\n", .{ws.bottom(Pos.init(2, 9))});
-    debug.print("left[9][10] = '{c}' (expecting = 'X')\n", .{ws.left(Pos.init(9, 10))});
-    debug.print("right[9][10] = '{c}' (expecting = '.')\n", .{ws.left(Pos.init(9, 10))});
-    debug.print("right[8][4] = '{c}' (expecting = 'X')\n", .{ws.right(Pos.init(8, 4))});
-    debug.print("topleft[10][10] = '{c}' (expecting = 'X')\n", .{ws.topleft(Pos.init(10, 10))});
-    debug.print("topright[10][0] = '{c}' (expecting = 'X')\n", .{ws.topright(Pos.init(10, 0))});
-    debug.print("bottomleft[6][10] = '{c}' (expecting = 'A')\n", .{ws.bottomleft(Pos.init(6, 10))});
-    debug.print("bottomright[0][0] = '{c}' (expecting = 'S')\n", .{ws.bottomright(Pos.init(0, 0))});
+    // const ws = try WordSearch.init(ally, example);
+    const ws = try WordSearch.init(ally, wordsearch);
+    const part1 = ws.searchAll();
+    debug.print("part 1: {d}\n", .{part1});
 }
