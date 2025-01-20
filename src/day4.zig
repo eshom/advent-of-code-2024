@@ -90,15 +90,19 @@ const WordSearch = struct {
         return .{ .contents = buf[0 .. rows * cols], .rows = rows, .cols = cols };
     }
 
-    pub fn search(self: *const WordSearch, where: Pos) u64 {
-        return searchInternal(self, where, 0, .center);
+    pub fn search(self: *const WordSearch, where: Pos, part1: bool) u64 {
+        if (part1) {
+            return searchInternal(self, where, 0, .center);
+        } else {
+            return @intFromBool(searchInternal2(self, where));
+        }
     }
 
-    pub fn searchAll(self: *const WordSearch) u64 {
+    pub fn searchAll(self: *const WordSearch, part1: bool) u64 {
         var out: u64 = 0;
         for (0..self.rows) |r| {
             for (0..self.cols) |c| {
-                out += search(self, Pos.init(r, c));
+                out += search(self, Pos.init(r, c), part1);
             }
         }
         return out;
@@ -131,6 +135,29 @@ const WordSearch = struct {
         }
 
         return xmas_count;
+    }
+
+    fn searchInternal2(self: *const WordSearch, where: Pos) bool {
+        var m_count: u8 = 0;
+        var s_count: u8 = 0;
+
+        const center = self.getRel(where, .center);
+
+        if (center != 'A') return false;
+
+        const corners: [4]u8 = .{
+            self.getRel(where, .topleft),
+            self.getRel(where, .topright),
+            self.getRel(where, .bottomleft),
+            self.getRel(where, .bottomright),
+        };
+
+        for (corners) |c| {
+            s_count += if (c == 'S') 1 else 0;
+            m_count += if (c == 'M') 1 else 0;
+        }
+
+        return if (m_count == 2 and s_count == 2) true else false;
     }
 
     fn circle(self: *const WordSearch, center: Pos) Circle {
@@ -235,6 +262,8 @@ pub fn main() !void {
 
     // const ws = try WordSearch.init(ally, example);
     const ws = try WordSearch.init(ally, wordsearch);
-    const part1 = ws.searchAll();
+    const part1 = ws.searchAll(true);
+    const part2 = ws.searchAll(false);
     debug.print("part 1: {d}\n", .{part1});
+    debug.print("part 2: {d}\n", .{part2});
 }
