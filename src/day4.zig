@@ -19,6 +19,20 @@ const example =
     \\
 ;
 
+const example2 =
+    \\..........
+    \\...M.S....
+    \\....A.....
+    \\...M.S....
+    \\...MMM....
+    \\....A.....
+    \\...SSS....
+    \\...S.M....
+    \\....A.....
+    \\...M.S....
+    \\
+;
+
 const Direction = enum(usize) {
     left = 0,
     topleft,
@@ -152,6 +166,9 @@ const WordSearch = struct {
             self.getRel(where, .bottomright),
         };
 
+        if (corners[0] == corners[3]) return false;
+        if (corners[1] == corners[2]) return false;
+
         for (corners) |c| {
             s_count += if (c == 'S') 1 else 0;
             m_count += if (c == 'M') 1 else 0;
@@ -261,6 +278,7 @@ pub fn main() !void {
     const ally = arena.allocator();
 
     // const ws = try WordSearch.init(ally, example);
+    // const ws = try WordSearch.init(ally, example2);
     const ws = try WordSearch.init(ally, wordsearch);
     const part1 = ws.searchAll(true);
     const part2 = ws.searchAll(false);
