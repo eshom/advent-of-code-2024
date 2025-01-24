@@ -47,12 +47,10 @@ fn distSum(lists: *const Lists) u64 {
 fn similarityScore(lookup: u64, sorted: []const u64) u64 {
     const idx_maybe = std.sort.binarySearch(
         u64,
-        lookup,
         sorted,
-        {},
+        lookup,
         struct {
-            fn orderU64(context: void, lhs: u64, rhs: u64) std.math.Order {
-                _ = context;
+            fn orderU64(lhs: u64, rhs: u64) std.math.Order {
                 return std.math.order(lhs, rhs);
             }
         }.orderU64,
